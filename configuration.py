@@ -59,13 +59,7 @@ class ConfigTelnet:
         backup = backup.replace('\n','\r')
         backup = backup.replace(self.juniper_prompt_oper, '')
 
-        result['configuration'] = backup
-        result['timestamp'] = str(datetime.now())
-        result['address'] = self.credential['ip']
-        result['hostname'] = self.credential['hostname']
-        result['status'] = 'SUCCESS'
-
-        return result
+        return backup
 
     def juniper_conf_restore(self, backup):
         result = dict()
@@ -83,12 +77,7 @@ class ConfigTelnet:
         self.telnet.write(b'commit\n')
         self.telnet.read_until(b'commit complete')
 
-        result['address'] = self.credential['ip']
-        result['status'] = 'SUCCESS'
-        result['timestamp'] = str(datetime.now())
-        result['hostname'] = self.credential['hostname']
-
-        return result
+        return True
 
     def cisco_conf_backup(self):
         result = dict()
@@ -97,13 +86,9 @@ class ConfigTelnet:
 
         #get entire configuration
         backup =  self.telnet.read_until(self.cisco_prompt.encode('ascii'))
-        result['configuration'] = backup.replace('\n','\r')
-        result['timestamp'] = str(datetime.now())
-        result['address'] = self.credential['ip']
-        result['status'] = 'SUCCESS'
-        result['hostname'] = self.credential['hostname']
+        backup = backup.replace('\n','\r')
 
-        return result
+        return backup
 
     def cisco_conf_restore(self, backup):
         result = dict()
@@ -124,12 +109,7 @@ class ConfigTelnet:
         time.sleep(1)
         self.telnet.write(b'y\r')
 
-        result['address'] = self.credential['ip']
-        result['status'] = 'SUCCESS'
-        result['timestamp'] = str(datetime.now())
-        result['hostname'] = self.credential['hostname']
-        
-        return result
+        return True 
 
     def close(self):
         self.telnet.close()
@@ -152,22 +132,6 @@ class ConfigSSH:
     def close(self):
         self.conn.disconnect()
 
-    '''
-    def find_hostname(self):
-        prompt = self.conn.find_prompt()
-        if self.credential['device_type'] == 'cisco_ios':
-            if '>' in prompt:
-                hostname = prompt.replace('>','')
-                return hostname
-            elif '#' in prompt:
-                hostname = prompt.replace('#','')
-                return hostname
-        elif self.credential['device_type'] == 'juniper_junos':
-            hostname_search = re.search(r'\S+@(\S+)[>#]', self.conn.find_prompt())
-            hostname = hostname_search.group(1)
-            return hostname
-    '''
-
     def cisco_conf_backup(self):
         cisco_conf = dict()
         #find hostname
@@ -179,12 +143,9 @@ class ConfigSSH:
         
         #grab current config
         config_output = self.conn.send_command('show running-config')
-        cisco_conf['configuration'] = config_output.replace('\n','\r')
-        cisco_conf['timestamp'] = str(datetime.now()) 
-        cisco_conf['address'] = self.credential['ip']
-        cisco_conf['status'] = 'SUCCESS' 
+        backup = config_output.replace('\n','\r')
 
-        return cisco_conf
+        return backup
     
     def juniper_conf_backup(self):
         juniper_conf = dict()
@@ -193,12 +154,9 @@ class ConfigSSH:
 
         #grab current config
         config_output = self.conn.send_command('show configuration')
-        juniper_conf['configuration'] = config_output.replace('\n','\r')
-        juniper_conf['timestamp'] = str(datetime.now())
-        juniper_conf['address'] = self.credential['ip']
-        juniper_conf['status'] = 'SUCCESS'
+        backup = config_output.replace('\n','\r')
 
-        return juniper_conf
+        return backup
 
     def cisco_conf_restore(self, config):
         cisco_conf = dict()
@@ -212,11 +170,7 @@ class ConfigSSH:
 
         #restore config to system
         self.conn.send_command('configure replace flash:restore-config.conf\ry\r\r')
-        cisco_conf['hostname'] = self.hostname
-        cisco_conf['address'] = self.credential['ip']
-        cisco_conf['status'] = 'SUCCESS'
-        cisco_conf['timestamp'] = str(datetime.now())
-        return cisco_conf
+        return True
 
     def juniper_conf_restore(self, config):
         juniper_conf = dict()
@@ -228,10 +182,6 @@ class ConfigSSH:
 
         #restore config to system
         self.conn.send_config_set(['load override /var/home/%s/restore-config.conf' % self.credential['username'],'commit'])
-        juniper_conf['hostname'] = self.hostname
-        juniper_conf['address'] = self.credential['ip']
-        juniper_conf['restore_status'] = 'SUCCESS'
-        juniper_conf['timestamp'] = str(datetime.now())
 
-        return juniper_conf
+        return True
 
